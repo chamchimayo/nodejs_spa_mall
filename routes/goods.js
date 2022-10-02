@@ -1,11 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const Goods = require("../schemas/goods");
+const Cart = require("../schemas/cart")
 
+// 상품 목록 조회 API
 router.get("/goods", (req, res) => {
     res.json({ goods: goods });
 });
 
+// 상품 상세 조회 API
 router.get("/goods/:goodsId", (req, res) => {
     const goods = [
         {
@@ -49,18 +52,7 @@ router.get("/goods/:goodsId", (req, res) => {
     res.json({"detail" : detail});
 })
 
-// localhost:3000/api/ GET
-router.get("/", (req, res) => {
-    res.send("goods 기본 url입니다.");
-});
-
-// router.get("/:goodId", (req, res) => {
-//     const goodId = req.params.goodId;
-//     console.log("fffffffff");
-
-//     res.json({ goodId: goodId });
-// });
-
+// 상품 생성 API
 router.post("/goods", async (req, res) => {
 	const { goodsId, name, thumbnailUrl, category, price } = req.body;
 
@@ -72,6 +64,46 @@ router.post("/goods", async (req, res) => {
   const createdGoods = await Goods.create({ goodsId, name, thumbnailUrl, category, price });
 
   res.json({ goods: createdGoods });
+});
+
+// 장바구니에 상품 추가 API
+router.post("/goods/:goodsId/cart", async (req, res) => {
+    const { goodsId } = req.params;
+    const { quantity } = req.body;
+
+    const existsCarts = await Cart.find({ goodsId: Number(goodsId) });
+    if(existsCarts.length) {
+        return res.json({ success: false, errorMessage: "이미 장바구니에 존재하는 상품입니다." });
+    }
+
+    await Cart.create({ goodsId: Number(goodsId), quantity: quantity });
+
+    res.json({ result: "success" });
+});
+
+// 장바구니의 상품 수량 수정 API
+router.put("/goods/:goodsId/cart", async (req, res) => {
+    const { goodsId } = req.params;
+    const { quantity } = req.body;
+
+    const existsCarts = await Cart.find({goodsId: Number(goodsId) });
+    if(existsCarts.length) {
+        await Cart.updateOne({ goodsId: Number(goodsId) }, { $set: { quantity } });
+    }
+
+    res.json({ success: true });
+});
+
+// 장바구니의 상품 제거 API
+router.delete("/goods/:goodsId/cart", async (req, res) => {
+    const { goodsId } = req.params;
+
+    const existsCarts = await Cart.find({ goodsId });
+    if(existsCarts.length > 0) {
+        await Cart.deleteOne({ goodsId });
+    }
+    
+    res.json({ result: "success" });
 });
 
 module.exports = router;
